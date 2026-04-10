@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+.env
+.env.local
+.DS_Store
+
+# Supabase local dev
+supabase/.branches
+supabase/.temp
+
+# TypeScript
+*.js.map

@@ -1,0 +1,174 @@
+import "react-native-url-polyfill/auto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createClient } from "@supabase/supabase-js";
+import { Database, Entry, Tag, Media } from "./types";
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+// ─── Entry Queries ──────────────────────────────────────────────────────────────
+
+export async function getEntries(limit = 50, tagId?: string): Promise<Entry[]> {
+  let query = supabase
+    .from("entries")
+    .select(`*, tags:entry_tags(tag:tags(*)), media(*)`)
+    .order("entry_date", { ascending: false })
+    .limit(limit);
+
+  if (tagId) {
+    query = query.eq("entry_tags.tag_id", tagId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as Entry[];
+}
+
+export async function getEntry(id: string): Promise<Entry | null> {
+  const { data, error } = await supabase
+    .from("entries")
+    .select(`*, tags:entry_tags(tag:tags(*)), media(*)`)
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as unknown as Entry;
+}
+
+export async function getEntriesForMonth(year: number, month: number): Promise<Entry[]> {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const end = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const { data, error } = await supabase
+    .from("entries")
+    .select("id, entry_date, title, tags:entry_tags(tag:tags(*))")
+    .gte("entry_date", start)
+    .lt("entry_date", end);
+  if (error) throw error;
+  return (data ?? []) as unknown as Entry[];
+}
+
+export async function createEntry(
+  entry: Database["public"]["Tables"]["entries"]["Insert"]
+): Promise<Entry> {
+  const { data, error } = await supabase
+    .from("entries")
+    .insert(entry)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Entry;
+}
+
+export async function updateEntry(
+  id: string,
+  updates: Database["public"]["Tables"]["entries"]["Update"]
+): Promise<Entry> {
+  const { data, error } = await supabase
+    .from("entries")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Entry;
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  const { error } = await supabase.from("entries").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function approveEntry(id: string): Promise<Entry> {
+  return updateEntry(id, { approved: true });
+}
+
+// ─── Tag Queries ────────────────────────────────────────────────────────────────
+
+export async function getTags(): Promise<Tag[]> {
+  const { data, error } = await supabase
+    .from("tags")
+    .select("*")
+    .order("is_canonical", { ascending: false })
+    .order("name");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createTag(name: string, color?: string): Promise<Tag> {
+  const { data, error } = await supabase
+    .from("tags")
+    .insert({ name, color: color ?? null, is_canonical: false })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function assignTags(entryId: string, tagIds: string[]): Promise<void> {
+  // Remove existing tags for this entry
+  await supabase.from("entry_tags").delete().eq("entry_id", entryId);
+  if (tagIds.length === 0) return;
+  const { error } = await supabase
+    .from("entry_tags")
+    .insert(tagIds.map((tag_id) => ({ entry_id: entryId, tag_id })));
+  if (error) throw error;
+}
+
+export async function getTagCounts(): Promise<{ tag: Tag; count: number }[]> {
+  const { data, error } = await supabase
+    .from("entry_tags")
+    .select("tag:tags(*), entry_id");
+  if (error) throw error;
+  const counts: Record<string, { tag: Tag; count: number }> = {};
+  for (const row of data ?? []) {
+    const tag = (row as any).tag as Tag;
+    if (!counts[tag.id]) counts[tag.id] = { tag, count: 0 };
+    counts[tag.id].count++;
+  }
+  return Object.values(counts).sort((a, b) => b.count - a.count);
+}
+
+// ─── Media ──────────────────────────────────────────────────────────────────────
+
+export async function uploadMedia(
+  entryId: string,
+  uri: string,
+  mediaType: string,
+  caption?: string
+): Promise<Media> {
+  const fileName = `${entryId}/${Date.now()}.jpg`;
+  const formData = new FormData();
+  formData.append("file", {
+    uri,
+    name: fileName,
+    type: mediaType,
+  } as any);
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("media")
+    .upload(fileName, formData);
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
+
+  const { data, error } = await supabase
+    .from("media")
+    .insert({
+      entry_id: entryId,
+      file_url: urlData.publicUrl,
+      media_type: mediaType,
+      caption: caption ?? null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}

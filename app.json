@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "nocturnal",
+    "slug": "nocturnal",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "nocturnal",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.markren.nocturnal"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090b"
+      },
+      "package": "com.markren.nocturnal"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "nocturnal needs access to your photos to attach images to journal entries."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
