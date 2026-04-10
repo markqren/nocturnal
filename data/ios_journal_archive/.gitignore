@@ -1,0 +1,4 @@
+# Ignore all journal entry files — personal data, not for version control
+*
+!.gitignore
+!.claudeignore
