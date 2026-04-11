@@ -7,6 +7,7 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  db: { schema: "nocturnal" },
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
@@ -20,12 +21,12 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export async function getEntries(limit = 50, tagId?: string): Promise<Entry[]> {
   let query = supabase
     .from("entries")
-    .select(`*, tags:entry_tags(tag:tags(*)), media(*)`)
+    .select(`*, journal_tags:entry_journal_tags(tag:journal_tags(*)), media(*)`)
     .order("entry_date", { ascending: false })
     .limit(limit);
 
   if (tagId) {
-    query = query.eq("entry_tags.tag_id", tagId);
+    query = query.eq("entry_journal_tags.tag_id", tagId);
   }
 
   const { data, error } = await query;
@@ -36,7 +37,7 @@ export async function getEntries(limit = 50, tagId?: string): Promise<Entry[]> {
 export async function getEntry(id: string): Promise<Entry | null> {
   const { data, error } = await supabase
     .from("entries")
-    .select(`*, tags:entry_tags(tag:tags(*)), media(*)`)
+    .select(`*, journal_tags:entry_journal_tags(tag:journal_tags(*)), media(*)`)
     .eq("id", id)
     .single();
   if (error) throw error;
@@ -48,7 +49,7 @@ export async function getEntriesForMonth(year: number, month: number): Promise<E
   const end = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const { data, error } = await supabase
     .from("entries")
-    .select("id, entry_date, title, tags:entry_tags(tag:tags(*))")
+    .select("id, entry_date, title, journal_tags:entry_journal_tags(tag:journal_tags(*))")
     .gte("entry_date", start)
     .lt("entry_date", end);
   if (error) throw error;
@@ -94,7 +95,7 @@ export async function approveEntry(id: string): Promise<Entry> {
 
 export async function getTags(): Promise<Tag[]> {
   const { data, error } = await supabase
-    .from("tags")
+    .from("journal_tags")
     .select("*")
     .order("is_canonical", { ascending: false })
     .order("name");
@@ -104,7 +105,7 @@ export async function getTags(): Promise<Tag[]> {
 
 export async function createTag(name: string, color?: string): Promise<Tag> {
   const { data, error } = await supabase
-    .from("tags")
+    .from("journal_tags")
     .insert({ name, color: color ?? null, is_canonical: false })
     .select()
     .single();
@@ -113,19 +114,19 @@ export async function createTag(name: string, color?: string): Promise<Tag> {
 }
 
 export async function assignTags(entryId: string, tagIds: string[]): Promise<void> {
-  // Remove existing tags for this entry
-  await supabase.from("entry_tags").delete().eq("entry_id", entryId);
+  // Remove existing journal_tags for this entry
+  await supabase.from("entry_journal_tags").delete().eq("entry_id", entryId);
   if (tagIds.length === 0) return;
   const { error } = await supabase
-    .from("entry_tags")
+    .from("entry_journal_tags")
     .insert(tagIds.map((tag_id) => ({ entry_id: entryId, tag_id })));
   if (error) throw error;
 }
 
 export async function getTagCounts(): Promise<{ tag: Tag; count: number }[]> {
   const { data, error } = await supabase
-    .from("entry_tags")
-    .select("tag:tags(*), entry_id");
+    .from("entry_journal_tags")
+    .select("tag:journal_tags(*), entry_id");
   if (error) throw error;
   const counts: Record<string, { tag: Tag; count: number }> = {};
   for (const row of data ?? []) {

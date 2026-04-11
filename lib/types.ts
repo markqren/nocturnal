@@ -14,7 +14,7 @@ export interface Entry {
   source: EntrySource;
   ai_draft: boolean;
   approved: boolean;
-  tags?: Tag[];
+  journal_tags?: Tag[];
   media?: Media[];
 }
 
@@ -106,15 +106,15 @@ export interface Database {
     Tables: {
       entries: {
         Row: Entry;
-        Insert: Omit<Entry, "id" | "created_at" | "updated_at" | "tags" | "media">;
-        Update: Partial<Omit<Entry, "id" | "created_at" | "tags" | "media">>;
+        Insert: Omit<Entry, "id" | "created_at" | "updated_at" | "journal_tags" | "media">;
+        Update: Partial<Omit<Entry, "id" | "created_at" | "journal_tags" | "media">>;
       };
-      tags: {
+      journal_tags: {
         Row: Tag;
         Insert: Omit<Tag, "id">;
         Update: Partial<Omit<Tag, "id">>;
       };
-      entry_tags: {
+      entry_journal_tags: {
         Row: EntryTag;
         Insert: EntryTag;
         Update: EntryTag;
