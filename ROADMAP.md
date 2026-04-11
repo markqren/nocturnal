@@ -42,6 +42,7 @@
 | INF-03 | **Multi-user portability** | Infra | **Low** | Generalize opinionated design choices for broader use. Not a priority until V1 is proven. |
 | FEA-28 | **Guided prompts library** | Feature | **Low** | Curated set of journaling prompts for writer's block days. Concrete, not open-ended. Rotated so they don't feel stale. |
 | FEA-29 | **Search** | Feature | **Medium** | Full-text search across all entries. Supabase `to_tsvector` index on body + title. |
+| FEA-30 | **AI deep processing mode** | Feature | **High** | Therapeutically-informed agent mode activated when user wants to process something difficult with an entry as a starting point. Agent trained to notice blocked or unexpressed emotions in the writing, ask questions that open things up rather than summarize them, and act as a genuine partner in working through hard material — not just a reflective mirror. System prompt draws on somatic/IFS/ACT frameworks. Distinct from conversational mode in tone and depth. |
 
 ---
 
