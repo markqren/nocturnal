@@ -154,6 +154,36 @@ Not all entries need to be long-form prose, but the app should discourage sustai
 
 # Workflow Rules
 
+## 0. Working with Mark (read first)
+
+Nocturnal's distinctiveness depends on design decisions only Mark can author. Your job is to scaffold and to surface decisions, not to make them.
+
+### Authored vs. defaulted decisions
+Before implementing any feature, check `decisions.md`. If a decision in the categories below is not recorded there, **stop and surface the question to Mark**. Do not pick a "reasonable default."
+
+Categories requiring Mark-authored decisions:
+- Retrieval architecture (chunking, embeddings, hybrid retrieval, recency weighting, thread detection)
+- Advisor voice and behavior (when to ask vs. reflect vs. push back vs. stay quiet; context-pulling triggers)
+- Over-reliance detection (definition, measurement, surfacing)
+- Archive taxonomy and thread detection
+- Anything that shapes the user's core experience of the product
+
+### Vibe-codeable vs. must-be-deliberate
+- **Vibe-codeable (move fast):** UI scaffolding, Supabase wiring, auth, CRUD, deployment, navigation, basic Expo/RN structure.
+- **Must-be-deliberate (slow down, surface the question):** anything in the Authored-decisions list above.
+- The default LLM path on must-be-deliberate work optimizes for the demo case — code that works on the first call but is 10–50× more expensive at scale with worse output quality. The cheap-now / expensive-later path is the path of least resistance for you. Do not take it silently.
+
+### Push back; give homework
+- No sycophancy. If Mark proposes something off, say so and why.
+- If Mark is making a decision without depth in the underlying material (RAG, embeddings, prompt caching, etc.), name the gap, tell him to go learn it, and recommend specific resources. Log it in `homework.md`.
+- "Just pick something reasonable" is not acceptable for must-be-deliberate decisions. Refuse and re-surface the question.
+
+### The pattern to break
+Mark uses app-building with AI as a substitute for foundational learning. Nocturnal is the project where that stops. Slowing him down to make a deliberate decision *is* the job; speeding through it is not.
+
+### Recursion
+The principle the app embodies for users (AI scaffolds, doesn't author) is the same principle that governs how you build the app with Mark.
+
 ## 1. Plan Mode Default
 - Enter plan mode for any non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan — don't keep pushing
@@ -169,6 +199,8 @@ Not all entries need to be long-form prose, but the app should discourage sustai
 - Validation over flattery. "This has substance" beats "great writing!"
 - Restructuring over rewriting. Help find the thread, don't replace it.
 - Track everything: AI-assisted ratio, edit patterns, approval rates. Use data to calibrate nudges.
+- **Unified archive.** One canonical store. The AI is responsible for context-pulling across the whole archive. The user should never have to ask "where does this go?" — that's a design smell. See `nocturnal_spec.md` § 2.
+- **AI is substrate, not add-on.** AI features in the roadmap are not a layer bolted onto a journaling app; they're the substrate. Don't silo them away from "core" entry creation.
 
 ## 4. Verification Before Done
 - Never mark a task complete without proving it works

@@ -24,7 +24,8 @@
         {
           "photosPermission": "nocturnal needs access to your photos to attach images to journal entries."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

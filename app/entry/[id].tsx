@@ -200,19 +200,16 @@ export default function EntryDetail() {
       )}
 
       {/* Tags */}
-      {(entry.tags ?? []).length > 0 && (
+      {(entry.journal_tags ?? []).length > 0 && (
         <View className="flex-row flex-wrap gap-2 mt-4">
-          {(entry.tags ?? []).map((t: any) => {
-            const tag = t.tag ?? t;
-            return (
-              <View
-                key={tag.id}
-                className="px-3 py-1 rounded-full border border-border"
-              >
-                <Text className="text-muted text-xs">{tag.name}</Text>
-              </View>
-            );
-          })}
+          {(entry.journal_tags ?? []).map(({ tag }) => (
+            <View
+              key={tag.id}
+              className="px-3 py-1 rounded-full border border-border"
+            >
+              <Text className="text-muted text-xs">{tag.name}</Text>
+            </View>
+          ))}
         </View>
       )}
     </ScrollView>

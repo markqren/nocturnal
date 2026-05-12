@@ -9,7 +9,7 @@ interface Props {
 
 export default function EntryCard({ entry, onPress }: Props) {
   const preview = entry.body.replace(/#+\s/g, "").slice(0, 120);
-  const tags: Tag[] = (entry.tags ?? []).map((t: any) => t.tag ?? t);
+  const tags: Tag[] = (entry.journal_tags ?? []).map((j) => j.tag);
 
   return (
     <TouchableOpacity

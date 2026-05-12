@@ -26,8 +26,26 @@
 
 ---
 
+<details open>
+<summary><h2>2. Core Design Principle — Unified Archive, AI as Context-Puller</h2></summary>
+
+The unified archive is the substrate; context-pulling is the AI's job, not the user's. Mark writes into one place. The AI reasons across the whole archive and surfaces relevant context at the right moments. If the user ever pauses to ask "should I put this here or there," the design has failed.
+
+Downstream implications:
+
+- **Storage:** single canonical store. No project/folder structure imposed as a precondition for writing.
+- **Retrieval:** semantic + temporal + thread-aware. Not keyword-only. Selective recall — pull relevant historical context for a moment, not the full archive.
+- **Prompting:** the model needs structured access to the archive, not just the current entry. Prompt structure must be cache-friendly from day one (see § 5 and § 6).
+- **Tags/threads:** emergent properties of the archive, not gates on entry.
+
+This principle binds both the product (what users experience) and the development process (how agents build it). See `CLAUDE.md` § 0 and `decisions.md`.
+
+</details>
+
+---
+
 <details>
-<summary><h2>2. Problems & Solutions</h2></summary>
+<summary><h2>3. Problems & Solutions</h2></summary>
 
 Specific pain points from past journaling attempts, and how `nocturnal` addresses each one.
 
@@ -111,7 +129,7 @@ I'm tracking tasks in Disciplan, planning work, having reflective conversations 
 ---
 
 <details>
-<summary><h2>3. Features</h2></summary>
+<summary><h2>4. Features</h2></summary>
 
 ### V1 — Core (MVP)
 
@@ -180,13 +198,29 @@ I'm tracking tasks in Disciplan, planning work, having reflective conversations 
 ---
 
 <details>
-<summary><h2>4. Architecture</h2></summary>
+<summary><h2>5. Architecture</h2></summary>
 
 ### Stack
 - **Frontend:** React Native + Expo (iOS-first)
 - **Backend:** Supabase (Postgres + S3 file storage + auth)
 - **AI:** Anthropic API via backend functions. Sonnet for conversations, Haiku for classification.
 - **Data:** Cloud, single user
+
+### Retrieval architecture (first-class concern)
+
+The retrieval layer is *the* technical decision for this product. It determines both output quality (does the advisor feel like it knows me?) and economic viability (does cost grow linearly with the archive or stay flat?). Naive "stuff the archive into every prompt" can be 10–50× more expensive than smart retrieval at scale, with worse output quality due to noise.
+
+Open design decisions (Mark-authored, tracked in `decisions.md`):
+
+- Chunking strategy (entry-level vs. paragraph vs. semantic)
+- Embedding model
+- Hybrid retrieval composition (semantic + keyword + recency + thread-aware)
+- Recency weighting curve
+- Thread detection method
+- Vector store (likely Supabase `pgvector`, confirm)
+- Per-call context budget (tokens)
+
+Implementation must wait on these decisions. Prerequisite homework is tracked in `homework.md`.
 
 ### Data Model
 
@@ -209,42 +243,67 @@ I'm tracking tasks in Disciplan, planning work, having reflective conversations 
 ---
 
 <details>
-<summary><h2>5. Cost Estimates (Monthly, Single User)</h2></summary>
+<summary><h2>6. Cost Estimates & Cost Architecture</h2></summary>
+
+### Principle
+
+The retrieval architecture is the cost story. Naive "stuff the archive into context" scales linearly with archive size and gets expensive fast. Smart retrieval + aggressive prompt caching keeps per-call cost roughly flat as the archive grows. Choose the latter from day one — refactoring out of the naive path later means re-indexing the whole archive.
+
+### Estimates (single user, V1)
+
+Order-of-magnitude only; pricing changes. Validate against current Anthropic + Supabase pricing before locking decisions.
 
 | Component | Estimate |
 |---|---|
 | Supabase (DB + file storage) | $5–20 |
-| Anthropic API (agent + compaction) | $10–30 |
+| Anthropic API — naive (full archive in context, no caching) | $30–90+/mo, grows with archive |
+| Anthropic API — with retrieval + caching | $1–5/mo, roughly flat as archive grows |
 | Voice (future, not V1) | TBD |
-| **Total V1** | **~$20–50** |
+
+The gap between the two Anthropic rows is the design difference. Treat the high number as a warning, not a budget.
+
+### Operational guidance for development
+
+- Routine tests / dev iteration: Haiku
+- Advisor calls in real flow: Sonnet
+- Prompt caching: aggressive from day one (static system prompt + cached archive context + small per-call deltas)
 
 </details>
 
 ---
 
 <details>
-<summary><h2>6. Open Questions</h2></summary>
+<summary><h2>7. Open Questions</h2></summary>
 
-1. **Anthropic data export automation.** Programmatic access or manual-only? Determines daily ingestion feasibility.
-2. **Disciplan data layer.** Current DB setup? Shared Supabase or separate with bridge?
-3. **AI style learning.** System prompt + curated examples for V1. Revisit later.
-4. **Entry date vs. creation date.** Recollections need both. UI handling TBD.
-5. **Richness scoring.** What counts as "rich"? Needs definition.
-6. **Design language.** Visual direction TBD. Reference apps?
-7. **App name.** `nocturnal` is a working title (jour → nuit). Open to change.
+Core design questions (Mark-authored, also tracked in `decisions.md`):
+
+1. **Retrieval architecture.** Chunking, embedding model, hybrid retrieval composition, recency weighting, thread detection, per-call context budget.
+2. **Advisor voice spec.** When the advisor asks vs. reflects vs. pushes back vs. stays quiet; context-pulling triggers; tone register; question-asking patterns by mode.
+3. **Over-reliance — operational definition.** What counts, how it's measured, how it's surfaced without preachiness.
+
+Other open questions:
+
+4. **Anthropic data export automation.** Programmatic access or manual-only? Determines daily ingestion feasibility.
+5. **Disciplan integration mechanism.** *Database hosting decided 2026-05-11: shared Supabase project (`decisions.md`).* Still open: how nocturnal reads Disciplan data — direct cross-schema reads, views over disciplan tables, or periodic sync into `nocturnal.disciplan_events`.
+6. **AI style learning.** System prompt + curated examples for V1. Revisit later.
+7. **Entry date vs. creation date.** Recollections need both. UI handling TBD.
+8. **Richness scoring.** What counts as "rich"? Needs definition.
+9. **Design language.** Visual direction TBD. Reference apps?
+10. **App name.** `nocturnal` is a working title (jour → nuit). Open to change.
 
 </details>
 
 ---
 
 <details>
-<summary><h2>7. Next Steps</h2></summary>
+<summary><h2>8. Next Steps</h2></summary>
 
 1. Review and iterate on this spec
-2. Resolve open questions (#1 and #2 affect architecture)
-3. Detail the data model and set up Supabase schema
-4. Scaffold the Expo/React Native project
-5. Build V1 iteratively: entry creation → tags → dashboard → AI agent → import pipeline
-6. Import existing Day One and Notes entries as first real data
+2. Resolve the three core design questions (`decisions.md`): retrieval architecture, advisor voice spec, over-reliance definition. Do prerequisite homework first (`homework.md`).
+3. Resolve other open questions affecting architecture (Anthropic export, Disciplan data layer)
+4. Detail the data model and set up Supabase schema
+5. Scaffold the Expo/React Native project
+6. Build V1 iteratively: entry creation → tags → dashboard → AI agent (gated on retrieval + voice decisions) → import pipeline
+7. Import existing Day One and Notes entries as first real data
 
 </details>
